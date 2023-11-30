@@ -4,45 +4,29 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config['ALLOWED_EXTENSIONS'] = set(['jpg', 'png', 'jpeg'])
-app.config['UPLOAD_DIRECTORY'] = 'static/uploads/'
 
 def allowed_extension(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
-def predict(image_path):
-    # do prediction here
-    pass
-
 @app.route("/", methods = ['GET'])
 def homepage():
     return jsonify({
+        "data": None,
         "status": {
             "code": 200,
             "message": "api is running"
         },
-        "data": None,
     }), 200
 
-@app.route("/api/predict", methods = ['POST'])
+@app.route("/api/predict", methods = ['GET', 'POST'])
 def prediction():
     if request.method == 'POST':
         image = request.files["image"]
-
         if image and allowed_extension(image.filename):
-            filename = secure_filename(image.filename)
-            image.save(os.path.join(app.config['UPLOAD_DIRECTORY'], filename))
-            # image_path = os.path.join(app.config['UPLOAD_DIRECTORY'], filename)
-
             # do prediction here 
-            # class_name, confidence_score = predict(image_path)
-
             # get specific information from database
-
+            # get contact information from database
             return jsonify({
-                "status": {
-                    "code": 200,
-                    "message": "success predicting image"
-                },
                 "data": {
                     "class_name": "joglo (dummy)",
                     "confidence_score": 0.9,
@@ -51,26 +35,33 @@ def prediction():
                         "name": "joglo",
                         "description": "lorem ipsum",
                         "image": "https://storage.googleapis.com/aruna-images/joglo.jpg",
+                    },
+                    "contact": {
+                        "id": 1,
+                        "name": "joglo owner",
+                        "phone": "081234567890"
                     }
                 },
+                "status": {
+                    "code": 200,
+                    "message": "success predicting image"
+                },
             }), 200
-        
         else:
             return jsonify({
+                "data": None,
                 "status": {
                     "code": 400,
                     "message": "invalid image extension. only accept jpg, jpeg, and png."
                 },
-                "data": None,
             }), 400
-
     else:
         return jsonify({
+            "data": None,
             "status": {
                 "code": 405,
                 "message": "Method not allowed"
             },
-            "data": None,
         }), 405
 
 
@@ -78,12 +69,7 @@ def prediction():
 def get_articles():
     if request.method == 'GET':
         # get specific information from database
-
         return jsonify({
-            "status": {
-                "code": 200,
-                "message": "success getting articles"
-            },
             "data": [
                 {
                     "id": 1,
@@ -104,57 +90,55 @@ def get_articles():
                     "image": "https://storage.googleapis.com/aruna-images/joglo.jpg",
                 }
             ],
+            "status": {
+                "code": 200,
+                "message": "success getting articles"
+            },
         }), 200
 
     else:
         return jsonify({
+            "data": None,
             "status": {
                 "code": 405,
                 "message": "Method not allowed"
             },
-            "data": None,
         }), 405
 
 @app.route("/api/database/articles/<int:article_id>", methods = ['GET'])
 def get_articles_by_id(article_id):
     if request.method == 'GET':
-        # get specific information from database
-        article = 1
-
-        if article:
+        if 0 < article_id < 6:
+            # get specific information from database
             return jsonify({
-                "status": {
-                    "code": 200,
-                    "message": "success getting articles"
-                },
                 "data": {
                     "id": 1,
                     "name": "joglo",
                     "description": "lorem ipsum",
                     "image": "https://storage.googleapis.com/aruna-images/joglo.jpg",
-                }
+                },
+                "status": {
+                    "code": 200,
+                    "message": "success getting articles"
+                },
             }), 200
-        
         else:
             return jsonify({
+                "data": None,
                 "status": {
                     "code": 404,
                     "message": "article not found"
                 },
-                "data": None,
             }), 404
-
     else:
         return jsonify({
+            "data": None,
             "status": {
                 "code": 405,
                 "message": "Method not allowed"
             },
-            "data": None,
         }), 405
 
 
 if __name__ == "__main__":
-    # This is used when running locally. Gunicorn is used to run the
-    # application on Google App Engine. See entrypoint in app.yaml.
-    app.run(host="127.0.0.1", port=8080, debug=True)
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
