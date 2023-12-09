@@ -130,7 +130,7 @@ def prediction():
                     }, 
                     "status": {
                         "code": 200,
-                        "message": "success getting articles"
+                        "message": "success predicting image"
                     },
                 }), 200
             else:
