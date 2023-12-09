@@ -1,13 +1,20 @@
 import os
 import time
+import keras
 import base64
 import requests
+import numpy as np
+from PIL import Image
 import mysql.connector
+import tensorflow as tf
+from keras.preprocessing import image
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
+from keras.applications.resnet50 import preprocess_input, decode_predictions
 
 app = Flask(__name__)
 app.config['ALLOWED_EXTENSIONS'] = set(['jpg', 'png', 'jpeg'])
+app.config['UPLOAD_FOLDER'] = 'static/uploads/'
 
 def allowed_extension(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
@@ -29,6 +36,27 @@ def check_server_availability(destination_url, timeout=30):
             return False
     except requests.exceptions.Timeout:
         return False
+
+def getLabel():
+    label = ['gadang', 'honai', 'joglo', 'panjang', 'tongkonan']
+    return label
+
+# Load pre-trained ResNet50 model
+def loadmodel():
+    model = keras.models.load_model('aruna-model.h5')
+    return model
+
+def predict_class(image_path):
+    model = loadmodel()
+    # Load and preprocess the image
+    img = Image.open(image_path).convert("RGB")
+    img = img.resize((224, 224))
+    img_array = np.asarray(img)
+    img_array = np.expand_dims(img_array, axis=0)
+    # Get model predictions
+    predictions = model.predict(img_array)
+
+    return predictions
 
 # initialize database connection
 db = mysql.connector.connect(
@@ -53,20 +81,25 @@ def prediction():
     if request.method == 'POST':
         image = request.files["image"]
         if image and allowed_extension(image.filename):
-            # load image and encode it to base64
-            image_data = image.read()
-            encoded_image = base64.b64encode(image_data).decode("utf-8")
-            body = '{"signature_name": "serving_preprocess", "instances": [{"b64": "' + encoded_image + '"}]}'
-            content_length = len(body)
-            headers = {
-                "Content-Type": "application/json",
-                "Content-Length": str(content_length)
-            }
-            if check_server_availability(os.environ["TF_SERVING_URL"]):
-                # do prediction here 
-                response = requests.post(os.environ["TF_SERVING_URL"], headers=headers, data=body)
-                # get specific information from database
-                article = execute_querry("SELECT * FROM `articles` WHERE name LIKE '%" + "joglo" + "%'") # response.json()["predictions"][0]["labels"][0]
+            filename = secure_filename(image.filename)
+            image.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
+            image_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+
+            class_names = getLabel()
+            predicted_class = predict_class(image_path)
+            print(predicted_class)
+
+            for label in class_names:
+                score = tf.nn.softmax(predicted_class[0])
+
+            os.remove(image_path)
+            result_name = class_names[np.argmax(score)]
+            result_confidence = 100 * np.max(score)
+
+            # get specific information from database
+            article = execute_querry("SELECT * FROM `articles` WHERE name LIKE '%" + result_name + "%'")
+
+            if article:
                 # reconstruct article into json format
                 key_value_article = []
                 for id, name, description, image in article:
@@ -77,7 +110,7 @@ def prediction():
                         'image': image
                     })
                 # get contact information from database
-                contact = execute_querry('SELECT * FROM `contact_persons` WHERE `id_articles` = 1')
+                contact = execute_querry('SELECT * FROM `contact_persons` WHERE `id_articles` = ' + str(key_value_article[0]["id"]))
                 # reconstruct contact into json format
                 key_value_contact = []
                 for id, id_article, name, phone, contact_link in contact:
@@ -90,8 +123,8 @@ def prediction():
                 # return prediction result with additional information
                 return jsonify({
                     "data": {
-                        "class_name": response.json()["predictions"][0]["labels"][0],
-                        "confidence_score": response.json()["predictions"][0]["probabilities"][0],
+                        "class_name": result_name,
+                        "confidence_score": result_confidence,
                         "information": key_value_article[0],
                         "contact": key_value_contact[0]
                     }, 
@@ -102,12 +135,12 @@ def prediction():
                 }), 200
             else:
                 return jsonify({
-                "data": None,
-                "status": {
-                    "code": 503,
-                    "message": "Failed to predict due to destination server being unresponsive. Please try again later."
-                },
-            }), 503
+                    "data": None, 
+                    "status": {
+                        "code": 503,
+                        "message": "failed to fetch result data. please try again."
+                    },
+                }), 503
         else:
             return jsonify({
                 "data": None,
