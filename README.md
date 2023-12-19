@@ -1,4 +1,11 @@
-# API for ARUNA
+# Cloud Computing Team Members
+
+| Bangkit ID | Name | Learning Path | University | Contact |
+| ----- | ----- | ----- | ----- | ----- |
+|C128BSY3290|Shoffan Darul Mufti|Cloud Computing|Politeknik Negeri Jakarta|https://www.linkedin.com/in/shoffanda/|
+|C102BSY3325|Jonathan Christian|Cloud Computing|Institut Bisnis dan Informatika Kwik Kian Gie|https://www.linkedin.com/in/jonathan-christian-7b2009272/|
+
+## API for ARUNA
 
 Bangkit 2023 Capstone Project <br>
 
@@ -51,10 +58,3 @@ gcloud run deploy aruna \
 --project=<YOUR-GCP-PROJECT>
 ```
 10. Done
-
-# Cloud Computing Team Members
-
-| Bangkit ID | Name | Learning Path | University | Contact |
-| ----- | ----- | ----- | ----- | ----- |
-|C128BSY3290|Shoffan Darul Mufti|Cloud Computing|Politeknik Negeri Jakarta|https://www.linkedin.com/in/shoffanda/|
-|C102BSY3325|Jonathan Christian|Cloud Computing|Institut Bisnis dan Informatika Kwik Kian Gie|https://www.linkedin.com/in/jonathan-christian-7b2009272/|
