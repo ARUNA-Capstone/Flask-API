@@ -15,11 +15,20 @@ from keras.applications.resnet50 import preprocess_input, decode_predictions
 app = Flask(__name__)
 app.config['ALLOWED_EXTENSIONS'] = set(['jpg', 'png', 'jpeg'])
 app.config['UPLOAD_FOLDER'] = 'static/uploads/'
+app.config['CROPPED_IMAGE_FOLDER'] = 'static/cropped_images/'
 
 def allowed_extension(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
 def execute_querry(querry):
+    # initialize database connection
+    db = mysql.connector.connect(
+        host = os.environ["DB_HOST"],
+        user = os.environ["DB_USER"],
+        password = os.environ["DB_PASS"],
+        database = os.environ["DB_NAME"]
+    )
+    
     print(querry)
     cursor = db.cursor()
     cursor.execute(querry)
@@ -46,6 +55,28 @@ def loadmodel():
     model = keras.models.load_model('aruna-model.h5')
     return model
 
+def cropimage(image_path, filename):
+    img = Image.open(image_path).convert("RGB")
+    # Get the dimensions of the original image
+    original_width, original_height = img.size
+
+    # Calculate the size of the square crop
+    crop_size = min(original_width, original_height)
+
+    # Calculate the coordinates for the crop
+    left = (original_width - crop_size) // 2
+    top = (original_height - crop_size) // 2
+    right = left + crop_size
+    bottom = top + crop_size
+
+    # Crop the image to a square centered region
+    cropped_image = img.crop((left, top, right, bottom))
+
+    cropped_image.save(os.path.join(app.config["CROPPED_IMAGE_FOLDER"], filename))
+    cropped_image_path = os.path.join(app.config["CROPPED_IMAGE_FOLDER"], filename)
+
+    return cropped_image_path
+
 def predict_class(image_path):
     model = loadmodel()
     # Load and preprocess the image
@@ -57,14 +88,6 @@ def predict_class(image_path):
     predictions = model.predict(img_array)
 
     return predictions
-
-# initialize database connection
-db = mysql.connector.connect(
-    host = os.environ["DB_HOST"],
-    user = os.environ["DB_USER"],
-    password = os.environ["DB_PASS"],
-    database = os.environ["DB_NAME"]
-)
 
 @app.route("/", methods = ['GET'])
 def homepage():
@@ -86,13 +109,15 @@ def prediction():
             image_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
 
             class_names = getLabel()
-            predicted_class = predict_class(image_path)
+            cropped_image = cropimage(image_path, filename)
+            print(cropped_image)
+            predicted_class = predict_class(cropped_image)
             print(predicted_class)
 
             for label in class_names:
                 score = tf.nn.softmax(predicted_class[0])
 
-            os.remove(image_path)
+            # os.remove(image_path)
             result_name = class_names[np.argmax(score)]
             result_confidence = 100 * np.max(score)
 
@@ -130,7 +155,7 @@ def prediction():
                     }, 
                     "status": {
                         "code": 200,
-                        "message": "success predicting image"
+                        "message": "success getting articles"
                     },
                 }), 200
             else:
