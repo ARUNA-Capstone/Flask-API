@@ -18,7 +18,7 @@ We're using Python Flask for developing this API and deploy it on Google CLoud P
 https://aruna-r3wznanhga-et.a.run.app/
 
 ### Documentation
-[Aruna API Docimentation](https://pandarl.notion.site/Aruna-API-Documentation-c63074cec06241ef870e79f623ce5f86?pvs=4)
+[Aruna API Documentation](https://pandarl.notion.site/Aruna-API-Documentation-c63074cec06241ef870e79f623ce5f86?pvs=4)
 
 ## Replicate our work
 
